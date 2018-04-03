@@ -1,10 +1,10 @@
-scalaVersion := "2.11.5"
+scalaVersion := "2.12.4"
 
 val wmVersion = "0.4.27"
 
 libraryDependencies ++={
-  val akkaV = "2.4.9"
-  val akkaHttpV = "10.0.5"
+  val akkaV = "2.5.11"
+  val akkaHttpV = "10.1.0"
   Seq(
     "com.typesafe.akka"              %%  "akka-actor"                              % akkaV,
     "com.typesafe.akka"              %%  "akka-http-spray-json"                    % akkaHttpV,
