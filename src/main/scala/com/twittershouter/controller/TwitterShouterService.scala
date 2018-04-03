@@ -3,7 +3,7 @@ package com.twittershouter.controller
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.StatusCodes.InternalServerError
 import akka.http.scaladsl.server.Directives._
-import com.twittershouter.business.TwitterManager
+import com.twittershouter.business.TwitterManaging
 import com.twittershouter.model.AppModelProtocol
 
 import scala.concurrent.ExecutionContext
@@ -11,7 +11,7 @@ import scala.util.{Failure, Success}
 
 trait TwitterShouterService extends AppModelProtocol {
 
-  val twitterManager: TwitterManager
+  val twitterManager: TwitterManaging
   implicit val actorSystem: ActorSystem
   implicit val executionContext: ExecutionContext
 
