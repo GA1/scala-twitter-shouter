@@ -1,5 +1,5 @@
 package com.twittershouter.model
 
 case class Tweet (
-  tweet: String
+  val text: String
 )

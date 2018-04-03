@@ -15,7 +15,9 @@ trait TwitterShouterService extends AppModelProtocol {
   implicit val actorSystem: ActorSystem
   implicit val executionContext: ExecutionContext
 
-  def tweetsRoute = path("tweets") {
+  private val servicePath = "tweets"
+
+  def tweetsRoute = path(servicePath) {
     onComplete(twitterManager.shoutedTweets()) {
       case Success(resp) => complete { resp }
       case Failure(resp) => handleFailure(resp)
@@ -24,7 +26,7 @@ trait TwitterShouterService extends AppModelProtocol {
 
   private def handleFailure(resp: Throwable) =
     complete {
-      actorSystem.log.info("There was a problem")
+      actorSystem.log.info("There was a problem while handling a /" + servicePath + " request")
       InternalServerError -> resp.toString
     }
 }

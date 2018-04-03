@@ -24,8 +24,10 @@ abstract class TwitterManager extends TwitterManaging {
 
   val twitterCaller: TwitterCalling
 
+  private val tweetShoutConverter = new TweetShoutConverter()
+
   override def shoutedTweets(): Future[TweetResponse] =
-    twitterCaller.getTweets().map(tweets => TweetResponse(tweets))
+    twitterCaller.getTweets().map(tweets => TweetResponse(tweets.map(tweetShoutConverter.toShoutedTweet(_))))
 
 
 }

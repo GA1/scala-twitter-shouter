@@ -19,7 +19,6 @@ class TwitterShouterServiceTest extends WordSpec with Matchers with ScalatestRou
       Future (List(Tweet("a"), Tweet("b")))
   }
 
-
   val testSubject = new TwitterShouterService {
     override implicit val actorSystem = TestUtils.testActorSystem
     override implicit val executionContext = TestUtils.testActorExecutionContext
@@ -40,7 +39,7 @@ class TwitterShouterServiceTest extends WordSpec with Matchers with ScalatestRou
   "The tweets endpoint" should {
     "should return tweets" in {
       Get("/tweets") ~> testSubject.tweetsRoute ~> check {
-        responseAs[String] shouldEqual """{"tweets":[{"tweet":"a"},{"tweet":"b"}]}""".stripMargin
+        responseAs[String] shouldEqual """{"tweets":[{"text":"A!"},{"text":"B!"}]}""".stripMargin
       }
     }
   }
