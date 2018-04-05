@@ -1,6 +1,6 @@
 package com.twittershouter.business
 
-import com.twittershouter.model.Tweet
+import com.twittershouter.models.Tweet
 
 class TweetShoutConverter {
 

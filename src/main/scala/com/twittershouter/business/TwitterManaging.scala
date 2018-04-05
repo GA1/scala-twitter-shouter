@@ -1,15 +1,17 @@
 package com.twittershouter.business
 
 import akka.actor.ActorSystem
-import com.twittershouter.model.{Tweet, TweetResponse}
+import akka.stream.ActorMaterializer
+import com.twittershouter.models.{AppModelProtocol, Tweet, TweetResponse}
 import com.twittershouter.providers.TwitterCalling
 
 import scala.concurrent.{ExecutionContext, Future}
 
-trait TwitterManaging {
+trait TwitterManaging extends AppModelProtocol {
 
   implicit val actorSystem: ActorSystem
   implicit val executionContext: ExecutionContext
+  implicit val actorMaterializer: ActorMaterializer
 
   val twitterCaller: TwitterCalling
 

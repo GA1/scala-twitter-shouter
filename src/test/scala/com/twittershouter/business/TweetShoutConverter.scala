@@ -1,7 +1,7 @@
 package com.twittershouter
 
 import com.twittershouter.business.TweetShoutConverter
-import com.twittershouter.model.Tweet
+import com.twittershouter.models.Tweet
 import org.scalatest.FlatSpecLike
 
 class TweetShoutConverterTest extends FlatSpecLike {

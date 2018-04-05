@@ -1,7 +1,7 @@
-package com.twittershouter.controller
+package com.twittershouter.controllers
 
 import akka.http.scaladsl.server.Directives._
-import com.twittershouter.model.AppModelProtocol
+import com.twittershouter.models.AppModelProtocol
 
 trait V1Api extends TwitterShouterService {
 

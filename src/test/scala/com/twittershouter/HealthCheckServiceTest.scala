@@ -2,7 +2,7 @@ package com.twittershouter
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.testkit.ScalatestRouteTest
-import com.twittershouter.controller.HealthCheckService
+import com.twittershouter.controllers.HealthCheckService
 import org.scalatest.{Matchers, WordSpec}
 
 import scala.concurrent.ExecutionContext

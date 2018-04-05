@@ -1,4 +1,4 @@
-package com.twittershouter.controller
+package com.twittershouter.controllers
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.server.Directives._
