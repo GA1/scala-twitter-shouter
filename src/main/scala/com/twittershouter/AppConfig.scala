@@ -10,4 +10,5 @@ object AppConfig {
   lazy val twitterApiRetrieveTokenUrl = config.getString("app.twitterApiRetrieveTokenUrl")
   lazy val twitterConsumerKey = config.getString("app.twitterConsumerKey")
   lazy val twitterConsumerSecret = config.getString("app.twitterConsumerSecret")
+  lazy val twitterApiRetrieveTweetsUrl = config.getString("app.twitterApiRetrieveTweetsUrl")
 }
