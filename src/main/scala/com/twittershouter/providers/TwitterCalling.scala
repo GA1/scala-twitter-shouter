@@ -7,7 +7,7 @@ import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.ActorMaterializer
 import com.twittershouter.AppConfig
-import com.twittershouter.models.{AppModelProtocol, Tweet, TwitterAppAuthenticationResponse}
+import com.twittershouter.models.{AppModelProtocol, DataErrorWrapper, Tweet, AuthenticationResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -17,7 +17,7 @@ trait TwitterCalling {
   implicit val executionContext: ExecutionContext
   implicit val actorMaterializer: ActorMaterializer
 
-  def getTweets(): Future[List[Tweet]]
+  def getTweets(): Future[DataErrorWrapper[List[Tweet]]]
 }
 
 abstract class TwitterCaller extends TwitterCalling with AppModelProtocol{
@@ -27,33 +27,36 @@ abstract class TwitterCaller extends TwitterCalling with AppModelProtocol{
 
   var bearerToken = ""
 
-  override def getTweets(): Future[List[Tweet]] = {
-    return authenticateApp(AppConfig.twitterApiRetrieveTokenUrl)
-      .flatMap(token => getTweetsFromTwitterapi(AppConfig.twitterApiRetrieveTweetsUrl, token))
-  }
+  override def getTweets(): Future[DataErrorWrapper[List[Tweet]]] =
+    authenticateApp(AppConfig.twitterApiRetrieveTokenUrl)
+      .flatMap(dataErrorObject => {
+          if (dataErrorObject.error.isEmpty) getTweetsFromTwitterApi(dataErrorObject.data.get)
+          else Future (DataErrorWrapper(None, dataErrorObject.error))
+        }
+      )
 
-  def generateRetrieveTokenUrl() = AppConfig.twitterApiRetrieveTokenUrl
+  def generateRetrieveTokenUrl(): String = AppConfig.twitterApiRetrieveTokenUrl
 
-  def getTweetsFromTwitterapi(url: String, accessToken: String): Future[List[Tweet]] = {
+  def getTweetsFromTwitterApi(accessToken: String): Future[DataErrorWrapper[List[Tweet]]] = {
+    val url = AppConfig.twitterApiRetrieveTweetsUrl
     actorSystem.log.info("calling /tweets")
     val headers: List[HttpHeader] = List(RawHeader("Authorization", "Bearer " + accessToken))
     val request = HttpRequest(method = HttpMethods.GET, uri = url, headers = headers)
     Http().singleRequest(request) flatMap {
-      case HttpResponse(StatusCodes.OK, _, entity, _) => {
-        val r = Unmarshal(entity).to[List[Tweet]]
-        r
-      }
-      case HttpResponse(code, a, b, c) => {
-        throw new Error("Got an error response with code " + code + " when calling " + url)
+      case HttpResponse(StatusCodes.OK, _, entity, _) =>
+        Unmarshal(entity).to[List[Tweet]].map(tweets => DataErrorWrapper(Some(tweets), None))
+      case HttpResponse(code, _, entity, _) => {
+        Future(DataErrorWrapper(None, Some("There was a problem when fetching tweets from: " + url)))
       }
       case _ => {
-        throw new Error("An unknown error ocurred when calling " + url)
+        val message = "There was an error when authenticating against: " + url
+        actorSystem.log.error(message)
+        Future(DataErrorWrapper(None, Some(message)))
       }
     }
   }
 
-  def authenticateApp(url: String): Future[String] = {
-    actorSystem.log.info("calling /oauth2/token")
+  def authenticateApp(url: String): Future[DataErrorWrapper[String]] = {
     val utils = new AuthenticationUtils()
     val encodedCredentials =
       utils.encodeTwitterCredentials(AppConfig.twitterConsumerKey, AppConfig.twitterConsumerSecret)
@@ -62,14 +65,16 @@ abstract class TwitterCaller extends TwitterCalling with AppModelProtocol{
     val request = HttpRequest(method = HttpMethods.POST, uri = url, entity = entity, headers = headers)
     Http().singleRequest(request) flatMap {
       case HttpResponse(StatusCodes.OK, _, entity, _) => {
-        val r = Unmarshal(entity).to[TwitterAppAuthenticationResponse].map(_.access_token)
+        val r = Unmarshal(entity).to[AuthenticationResponse].map(r => DataErrorWrapper(Some(r.access_token), None))
         r
       }
-      case HttpResponse(code, _, _, _) => {
-        throw new Error("Got an error response with code " + code + " when calling " + url)
+      case HttpResponse(code, _, entity, _) => {
+        Future{DataErrorWrapper(None, Some("There was a problem when fetching tweets from: " + url))}
       }
       case _ => {
-        throw new Error("An unknown error ocurred when calling " + url)
+        val message = "There was an error when authenticating against: " + url
+        actorSystem.log.error(message)
+        Future(DataErrorWrapper(None, Some(message)))
       }
     }
   }
