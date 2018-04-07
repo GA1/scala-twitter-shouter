@@ -17,23 +17,22 @@ object App {
     implicit val appActorMaterializer = ActorMaterializer()
     implicit val appExecutionContext = appActorSystem.dispatcher
 
-    val controller = new Controller {
+    trait ActorSystemContext {
+      implicit val executionContext: ExecutionContext = appExecutionContext
+    }
 
+    trait ActorSystemProvider extends ActorSystemContext {
+      implicit val actorSystem: ActorSystem = appActorSystem
+      implicit val actorMaterializer = appActorMaterializer
+    }
+
+    val controller = new Controller {
       override implicit val actorSystem: ActorSystem = appActorSystem
       override implicit val executionContext: ExecutionContext = appExecutionContext
       override implicit val actorMaterializer: ActorMaterializer = appActorMaterializer
 
-      override val twitterManager: TwitterManaging = new TwitterManager {
-
-        override implicit val actorSystem: ActorSystem = appActorSystem
-        override implicit val executionContext: ExecutionContext = appExecutionContext
-        override implicit val actorMaterializer: ActorMaterializer = appActorMaterializer
-
-        override val twitterCaller: TwitterCalling = new TwitterCaller {
-          override implicit val actorSystem: ActorSystem = appActorSystem
-          override implicit val executionContext: ExecutionContext = appExecutionContext
-          override implicit val actorMaterializer: ActorMaterializer = appActorMaterializer
-        }
+      override val twitterManager: TwitterManaging = new TwitterManager with ActorSystemContext {
+        override val twitterCaller: TwitterCalling = new TwitterCaller with ActorSystemProvider
       }
     }
 

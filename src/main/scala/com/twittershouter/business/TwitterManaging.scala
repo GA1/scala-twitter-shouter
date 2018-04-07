@@ -1,7 +1,6 @@
 package com.twittershouter.business
 
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
 import com.twittershouter.models.{AppModelProtocol, DataErrorWrapper, Tweet, TweetResponse}
 import com.twittershouter.providers.TwitterCalling
 
@@ -9,9 +8,8 @@ import scala.concurrent.{ExecutionContext, Future}
 
 trait TwitterManaging extends AppModelProtocol {
 
-  implicit val actorSystem: ActorSystem
+//  implicit val actorSystem: ActorSystem
   implicit val executionContext: ExecutionContext
-  implicit val actorMaterializer: ActorMaterializer
 
   val twitterCaller: TwitterCalling
 
@@ -20,9 +18,6 @@ trait TwitterManaging extends AppModelProtocol {
 }
 
 abstract class TwitterManager extends TwitterManaging {
-
-  implicit val actorSystem: ActorSystem
-  implicit val executionContext: ExecutionContext
 
   val twitterCaller: TwitterCalling
 

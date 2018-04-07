@@ -11,10 +11,14 @@ object TestUtils {
   implicit val testActorMaterializer = ActorMaterializer()
   implicit val testActorExecutionContext = testActorSystem.dispatcher
 
-  trait TestActorSystemProvider {
-    implicit val testActorSystem: ActorSystem = testActorSystem
-    implicit val testActorMaterializer: ActorMaterializer = testActorMaterializer
-    implicit val testExecutionContext: ExecutionContext = testActorExecutionContext
+
+  trait TestActorSystemContext {
+    implicit val executionContext: ExecutionContext = testActorExecutionContext
+  }
+
+  trait TestActorSystemProvider extends TestActorSystemContext {
+    implicit val actorSystem: ActorSystem = testActorSystem
+    implicit val actorMaterializer: ActorMaterializer = testActorMaterializer
   }
 
 }

@@ -22,9 +22,6 @@ trait TwitterCalling {
 
 abstract class TwitterCaller extends TwitterCalling with AppModelProtocol{
 
-  implicit val actorSystem: ActorSystem
-  implicit val executionContext: ExecutionContext
-
   var bearerToken = ""
 
   override def getTweets(): Future[DataErrorWrapper[List[Tweet]]] =
@@ -45,11 +42,8 @@ abstract class TwitterCaller extends TwitterCalling with AppModelProtocol{
     Http().singleRequest(request) flatMap {
       case HttpResponse(StatusCodes.OK, _, entity, _) =>
         Unmarshal(entity).to[List[Tweet]].map(tweets => DataErrorWrapper(Some(tweets), None))
-      case HttpResponse(code, _, entity, _) => {
-        Future(DataErrorWrapper(None, Some("There was a problem when fetching tweets from: " + url)))
-      }
       case _ => {
-        val message = "There was an error when authenticating against: " + url
+        val message = "There was an error when fetching tweets from: " + url
         actorSystem.log.error(message)
         Future(DataErrorWrapper(None, Some(message)))
       }
@@ -57,20 +51,22 @@ abstract class TwitterCaller extends TwitterCalling with AppModelProtocol{
   }
 
   def authenticateApp(url: String): Future[DataErrorWrapper[String]] = {
-    val utils = new AuthenticationUtils()
-    val encodedCredentials =
-      utils.encodeTwitterCredentials(AppConfig.twitterConsumerKey, AppConfig.twitterConsumerSecret)
-    val headers: List[HttpHeader] = List(RawHeader("Authorization", "Basic " + encodedCredentials))
-    val entity = FormData(Map("grant_type" -> "client_credentials")).toEntity
-    val request = HttpRequest(method = HttpMethods.POST, uri = url, entity = entity, headers = headers)
+    def createAuthenticationRequest = {
+      val utils = new AuthenticationUtils()
+      val encodedCredentials =
+        utils.encodeTwitterCredentials(AppConfig.twitterConsumerKey, AppConfig.twitterConsumerSecret)
+      val headers: List[HttpHeader] = List(RawHeader("Authorization", "Basic " + encodedCredentials))
+      val entity = FormData(Map("grant_type" -> "client_credentials")).toEntity
+      val request = HttpRequest(method = HttpMethods.POST, uri = url, entity = entity, headers = headers)
+      request
+    }
+
+    val request: HttpRequest = createAuthenticationRequest
     Http().singleRequest(request) flatMap {
-      case HttpResponse(StatusCodes.OK, _, entity, _) => {
-        val r = Unmarshal(entity).to[AuthenticationResponse].map(r => DataErrorWrapper(Some(r.access_token), None))
-        r
-      }
-      case HttpResponse(code, _, entity, _) => {
-        Future{DataErrorWrapper(None, Some("There was a problem when fetching tweets from: " + url))}
-      }
+      case HttpResponse(StatusCodes.OK, _, entity, _) =>
+        Unmarshal(entity).to[AuthenticationResponse].map(r => DataErrorWrapper(Some(r.access_token), None))
+      case HttpResponse(StatusCodes.Forbidden, _, _, _) =>
+        Future{DataErrorWrapper(None, Some("Could not authenticate with the provided credentials against: " + url))}
       case _ => {
         val message = "There was an error when authenticating against: " + url
         actorSystem.log.error(message)
