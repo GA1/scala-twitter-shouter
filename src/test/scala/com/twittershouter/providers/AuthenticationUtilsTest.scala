@@ -1,6 +1,5 @@
-package com.twittershouter
+package com.twittershouter.providers
 
-import com.twittershouter.providers.AuthenticationUtils
 import org.scalatest.FlatSpecLike
 
 class AuthenticationUtilsTest extends FlatSpecLike {

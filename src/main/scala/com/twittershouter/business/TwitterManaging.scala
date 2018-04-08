@@ -1,17 +1,16 @@
 package com.twittershouter.business
 
-import akka.actor.ActorSystem
 import com.twittershouter.models.{AppModelProtocol, DataErrorWrapper, Tweet, TweetResponse}
-import com.twittershouter.providers.TwitterCalling
+import com.twittershouter.providers.twitter.{TwitterAuthenticating, TwitterTweetsRetrieving}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 trait TwitterManaging extends AppModelProtocol {
 
-//  implicit val actorSystem: ActorSystem
   implicit val executionContext: ExecutionContext
 
-  val twitterCaller: TwitterCalling
+  val twitterTweetRetriever: TwitterTweetsRetrieving
+  val twitterAuthenticator: TwitterAuthenticating
 
   def shoutedTweets(): Future[DataErrorWrapper[TweetResponse]]
 
@@ -19,12 +18,21 @@ trait TwitterManaging extends AppModelProtocol {
 
 abstract class TwitterManager extends TwitterManaging {
 
-  val twitterCaller: TwitterCalling
+  val twitterTweetRetriever: TwitterTweetsRetrieving
+  val twitterAuthenticator: TwitterAuthenticating
 
   private val tweetShoutConverter = new TweetShoutConverter()
 
-  override def shoutedTweets(): Future[DataErrorWrapper[TweetResponse]] =
-    twitterCaller.getTweets().map(wrappedTweets => {
+  def getTweets(): Future[DataErrorWrapper[List[Tweet]]] =
+    twitterAuthenticator.authenticateApp()
+      .flatMap(dataErrorObject => {
+        if (dataErrorObject.error.isEmpty) twitterTweetRetriever.getTweetsFromTwitterApi(dataErrorObject.data.get)
+        else Future (DataErrorWrapper(None, dataErrorObject.error))
+      }
+    )
+
+  def shoutedTweets(): Future[DataErrorWrapper[TweetResponse]] =
+    getTweets().map(wrappedTweets => {
       if (wrappedTweets.error.isEmpty) {
         val tweets = wrappedTweets.data.get
         val shoutedTweets: List[Tweet] = tweets.map(tweetShoutConverter.toShoutedTweet(_))

@@ -1,8 +1,7 @@
-package com.twittershouter
+package com.twittershouter.controllers
 
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import com.twittershouter.TestUtils.TestActorSystemProvider
-import com.twittershouter.controllers.HealthCheckService
 import org.scalatest.{Matchers, WordSpec}
 
 class HealthCheckServiceTest extends WordSpec with Matchers with ScalatestRouteTest {
