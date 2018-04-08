@@ -13,6 +13,7 @@ import scala.concurrent.Future
 class TwitterShouterServiceTest extends WordSpec with Matchers with ScalatestRouteTest {
 
   val CORRECT_TOKEN = "correctToken"
+  val AUTHENTICATION_ERROR = "There was an authentication error!"
   val AN_ERROR = "There was an error!"
 
   private def createAuthenticatorReturning(dew: DataErrorWrapper[String]) = {
@@ -47,12 +48,37 @@ class TwitterShouterServiceTest extends WordSpec with Matchers with ScalatestRou
 
   "The tweets endpoint" should {
     "should return an error if authenticator has failed" in {
-      val failingAuthenticator = createAuthenticatorReturning(DataErrorWrapper(None, Some(AN_ERROR)))
+      val failingAuthenticator = createAuthenticatorReturning(DataErrorWrapper(None, Some(AUTHENTICATION_ERROR)))
       val testSubject = createTwitterShouterServiceWithAuthenticator(failingAuthenticator)
       Get("/tweets") ~> testSubject.tweetsRoute ~> check {
-        responseAs[String] shouldEqual """{"error":"There was an error!"}""".stripMargin
+        responseAs[String] shouldEqual """{"error":"There was an authentication error!"}""".stripMargin
       }
     }
   }
+
+  "The tweets endpoint" should {
+    "should return tweets without trying to authenticate the app if the app was already authenticated" in {
+      val authenticatorThatWorksOnlyOnce = {
+        new TwitterAuthenticating with TestUtils.TestActorSystemProvider {
+          var count = 0
+          override def authenticateApp(): Future[DataErrorWrapper[String]] = {
+            if (count == 0) {
+              count = count + 1
+              Future {DataErrorWrapper(Some(CORRECT_TOKEN), None)}
+            } else {
+              Future {DataErrorWrapper(None, Some(AUTHENTICATION_ERROR))}
+            }
+          }
+        }
+      }
+      createAuthenticatorReturning(DataErrorWrapper(None, Some(AUTHENTICATION_ERROR)))
+      val testSubject = createTwitterShouterServiceWithAuthenticator(authenticatorThatWorksOnlyOnce)
+      Get("/tweets") ~> testSubject.tweetsRoute
+      Get("/tweets") ~> testSubject.tweetsRoute ~> check {
+        responseAs[String] shouldEqual """{"data":{"tweets":[{"text":"A!"},{"text":"B!"}]}}""".stripMargin.stripMargin
+      }
+    }
+  }
+
 
 }

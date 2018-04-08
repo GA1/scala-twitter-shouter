@@ -22,14 +22,24 @@ abstract class TwitterManager extends TwitterManaging {
   val twitterAuthenticator: TwitterAuthenticating
 
   private val tweetShoutConverter = new TweetShoutConverter()
+  private var cachedAppAccessToken: Option[String] = None
 
-  def getTweets(): Future[DataErrorWrapper[List[Tweet]]] =
-    twitterAuthenticator.authenticateApp()
-      .flatMap(dataErrorObject => {
-        if (dataErrorObject.error.isEmpty) twitterTweetRetriever.getTweetsFromTwitterApi(dataErrorObject.data.get)
-        else Future (DataErrorWrapper(None, dataErrorObject.error))
-      }
-    )
+  def getTweets(): Future[DataErrorWrapper[List[Tweet]]] = {
+    if (cachedAppAccessToken.isEmpty) {
+      twitterAuthenticator.authenticateApp()
+        .flatMap(dataErrorObject => {
+          if (dataErrorObject.error.isEmpty) {
+            val accessToken = dataErrorObject.data.get
+            cachedAppAccessToken = Some(accessToken)
+            twitterTweetRetriever.getTweetsFromTwitterApi(accessToken)
+          }
+          else Future (DataErrorWrapper(None, dataErrorObject.error))
+        }
+      )
+    } else {
+      twitterTweetRetriever.getTweetsFromTwitterApi(cachedAppAccessToken.get)
+    }
+  }
 
   def shoutedTweets(): Future[DataErrorWrapper[TweetResponse]] =
     getTweets().map(wrappedTweets => {

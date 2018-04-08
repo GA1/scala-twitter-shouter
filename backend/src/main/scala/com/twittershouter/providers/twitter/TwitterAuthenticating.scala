@@ -27,7 +27,8 @@ abstract class TwitterAuthenticator extends TwitterAuthenticating with AppModelP
 
   def authenticateApp(): Future[DataErrorWrapper[String]] = {
     val url = AppConfig.twitterApiRetrieveTokenUrl
-    def createAuthenticationRequest = {
+
+    def createAuthenticationRequest() = {
       val encodedCredentials =
         utils.encodeTwitterCredentials(AppConfig.twitterConsumerKey, AppConfig.twitterConsumerSecret)
       val headers: List[HttpHeader] = List(RawHeader("Authorization", "Basic " + encodedCredentials))
@@ -36,11 +37,17 @@ abstract class TwitterAuthenticator extends TwitterAuthenticating with AppModelP
       request
     }
 
-    Http().singleRequest(createAuthenticationRequest) flatMap {
-      case HttpResponse(StatusCodes.OK, _, entity, _) =>
-        Unmarshal(entity).to[AuthenticationResponse].map(r => DataErrorWrapper(Some(r.access_token), None))
+    Http().singleRequest(createAuthenticationRequest()) flatMap {
+      case HttpResponse(StatusCodes.OK, _, entity, _) => {
+        Unmarshal(entity).to[AuthenticationResponse].map(r => {
+          val accessToken = r.access_token
+          DataErrorWrapper(Some(accessToken), None)
+        })
+      }
       case HttpResponse(StatusCodes.Forbidden, _, _, _) =>
-        Future{DataErrorWrapper(None, Some("Could not authenticate with the provided credentials against: " + url))}
+        Future {
+          DataErrorWrapper(None, Some("Could not authenticate with the provided credentials against: " + url))
+        }
       case _ => {
         val message = "There was an error when authenticating against: " + url
         actorSystem.log.error(message)
