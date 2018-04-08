@@ -5,7 +5,7 @@ import akka.http.scaladsl.Http
 import akka.stream.ActorMaterializer
 import com.twittershouter.business.{TwitterManager, TwitterManaging}
 import com.twittershouter.controllers.Controller
-import com.twittershouter.providers.twitter.{TwitterAuthenticator, TwitterCaller, TwitterTweetsRetrieving}
+import com.twittershouter.providers.twitter.{TwitterAuthenticator, TwitterTweetsRetriever, TwitterTweetsRetrieving}
 
 import scala.concurrent.ExecutionContext
 
@@ -32,7 +32,7 @@ object App {
       override implicit val actorMaterializer: ActorMaterializer = appActorMaterializer
 
       override val twitterManager: TwitterManaging = new TwitterManager with ActorSystemContext {
-        override val twitterTweetRetriever: TwitterTweetsRetrieving = new TwitterCaller with ActorSystemProvider
+        override val twitterTweetRetriever: TwitterTweetsRetrieving = new TwitterTweetsRetriever with ActorSystemProvider
         override val twitterAuthenticator: TwitterAuthenticator = new TwitterAuthenticator with ActorSystemProvider
       }
     }

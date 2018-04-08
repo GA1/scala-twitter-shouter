@@ -12,7 +12,7 @@ trait TwitterManaging extends AppModelProtocol {
   val twitterTweetRetriever: TwitterTweetsRetrieving
   val twitterAuthenticator: TwitterAuthenticating
 
-  def shoutedTweets(): Future[DataErrorWrapper[TweetResponse]]
+  def shoutedTweets(userName: String, numberOfTweets: Int): Future[DataErrorWrapper[TweetResponse]]
 
 }
 
@@ -24,25 +24,25 @@ abstract class TwitterManager extends TwitterManaging {
   private val tweetShoutConverter = new TweetShoutConverter()
   private var cachedAppAccessToken: Option[String] = None
 
-  def getTweets(): Future[DataErrorWrapper[List[Tweet]]] = {
+  def getTweets(userName: String, numberOfTweets: Int): Future[DataErrorWrapper[List[Tweet]]] = {
     if (cachedAppAccessToken.isEmpty) {
       twitterAuthenticator.authenticateApp()
         .flatMap(dataErrorObject => {
           if (dataErrorObject.error.isEmpty) {
             val accessToken = dataErrorObject.data.get
             cachedAppAccessToken = Some(accessToken)
-            twitterTweetRetriever.getTweetsFromTwitterApi(accessToken)
+            twitterTweetRetriever.getTweetsFromTwitterApi(accessToken, userName, numberOfTweets)
           }
           else Future (DataErrorWrapper(None, dataErrorObject.error))
         }
       )
     } else {
-      twitterTweetRetriever.getTweetsFromTwitterApi(cachedAppAccessToken.get)
+      twitterTweetRetriever.getTweetsFromTwitterApi(cachedAppAccessToken.get, userName, numberOfTweets)
     }
   }
 
-  def shoutedTweets(): Future[DataErrorWrapper[TweetResponse]] =
-    getTweets().map(wrappedTweets => {
+  def shoutedTweets(userName: String, numberOfTweets: Int): Future[DataErrorWrapper[TweetResponse]] =
+    getTweets(userName, numberOfTweets).map(wrappedTweets => {
       if (wrappedTweets.error.isEmpty) {
         val tweets = wrappedTweets.data.get
         val shoutedTweets: List[Tweet] = tweets.map(tweetShoutConverter.toShoutedTweet(_))

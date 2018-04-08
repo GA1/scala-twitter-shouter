@@ -1,6 +1,6 @@
 package com.twittershouter.controllers
 
-import akka.http.scaladsl.model.StatusCodes.InternalServerError
+import akka.http.scaladsl.model.StatusCodes.{BadRequest, InternalServerError}
 import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
 import com.twittershouter.business.TwitterManaging
@@ -15,12 +15,16 @@ trait TwitterShouterService extends AppModelProtocol {
   implicit val executionContext: ExecutionContext
   implicit val actorMaterializer: ActorMaterializer
 
-  private val servicePath = "tweets"
-
-  def tweetsRoute = path(servicePath) {
-    onComplete(twitterManager.shoutedTweets()) {
-      case Success(resp) => complete { resp }
-      case Failure(resp) => handleFailure(resp)
+  def tweetsRoute = path("shouted") {
+    parameters('userName.as[String].?, 'numberOfTweets.as[Int] ? 10) { (userName, numberOfTweets) =>
+      if (userName.isEmpty)
+        complete(BadRequest)
+      else {
+        onComplete(twitterManager.shoutedTweets(userName.get, numberOfTweets)) {
+          case Success(resp) => complete {resp}
+          case Failure(resp) => handleFailure(resp)
+        }
+      }
     }
   }
 

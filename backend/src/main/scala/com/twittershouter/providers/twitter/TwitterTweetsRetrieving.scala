@@ -8,6 +8,7 @@ import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.ActorMaterializer
 import com.twittershouter.AppConfig
 import com.twittershouter.models.{AppModelProtocol, DataErrorWrapper, Tweet}
+import com.twittershouter.providers.StringUtils
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -17,14 +18,15 @@ trait TwitterTweetsRetrieving {
   implicit val executionContext: ExecutionContext
   implicit val actorMaterializer: ActorMaterializer
 
-  def getTweetsFromTwitterApi(accessToken: String): Future[DataErrorWrapper[List[Tweet]]]
+  def getTweetsFromTwitterApi(accessToken: String, userName: String, numberOfTweets: Int): Future[DataErrorWrapper[List[Tweet]]]
 }
 
-abstract class TwitterCaller extends TwitterTweetsRetrieving with AppModelProtocol{
+abstract class TwitterTweetsRetriever extends TwitterTweetsRetrieving with AppModelProtocol{
 
-  def getTweetsFromTwitterApi(accessToken: String): Future[DataErrorWrapper[List[Tweet]]] = {
-    val url = AppConfig.twitterApiRetrieveTweetsUrl
-    actorSystem.log.info("calling /tweets")
+  private val utils: StringUtils = new StringUtils()
+
+  def getTweetsFromTwitterApi(accessToken: String, userName: String, numberOfTweets: Int): Future[DataErrorWrapper[List[Tweet]]] = {
+    val url = utils.formatTwitterTweetsUrl(AppConfig.twitterApiRetrieveTweetsUrl, userName, numberOfTweets)
     val headers: List[HttpHeader] = List(RawHeader("Authorization", "Bearer " + accessToken))
     val request = HttpRequest(method = HttpMethods.GET, uri = url, headers = headers)
     Http().singleRequest(request) flatMap {
