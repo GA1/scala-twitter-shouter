@@ -18,13 +18,10 @@ trait TwitterManaging extends AppModelProtocol {
 
 abstract class TwitterManager extends TwitterManaging {
 
-  val twitterTweetRetriever: TwitterTweetsRetrieving
-  val twitterAuthenticator: TwitterAuthenticating
-
   private val tweetShoutConverter = new TweetShoutConverter()
   private var cachedAppAccessToken: Option[String] = None
 
-  def getTweets(userName: String, numberOfTweets: Int): Future[DataErrorWrapper[List[Tweet]]] = {
+  private def getTweets(userName: String, numberOfTweets: Int): Future[DataErrorWrapper[List[Tweet]]] = {
     if (cachedAppAccessToken.isEmpty) {
       twitterAuthenticator.authenticateApp()
         .flatMap(dataErrorObject => {

@@ -15,7 +15,7 @@ class TwitterShouterServiceTest extends WordSpec with Matchers with ScalatestRou
 
   val CORRECT_TOKEN = "correctToken"
   val AUTHENTICATION_ERROR = "There was an authentication error!"
-  val AN_ERROR = "There was an error!"
+  val TWEETS_RETRIEVAL_ERROR = "There was an error while retrieving the tweets!"
 
   private def createAuthenticatorReturning(dew: DataErrorWrapper[String]) = {
     new TwitterAuthenticating with TestUtils.TestActorSystemProvider {
@@ -23,19 +23,32 @@ class TwitterShouterServiceTest extends WordSpec with Matchers with ScalatestRou
     }
   }
 
-  private def createTwitterShouterServiceWithAuthenticator(authenticator: TwitterAuthenticating) =
-    new TwitterShouterService with TestUtils.TestActorSystemContext {
-    override val twitterManager: TwitterManaging = new TwitterManager with TestUtils.TestActorSystemContext {
-      override val twitterTweetRetriever: TwitterTweetsRetrieving = new TwitterTweetsRetrieving with TestUtils.TestActorSystemProvider {
-        override def getTweetsFromTwitterApi(accessToken: String, userName: String, numberOfTweets: Int): Future[DataErrorWrapper[List[Tweet]]] = {
-          if (CORRECT_TOKEN == accessToken) Future(DataErrorWrapper(Some(List(Tweet("a"), Tweet("b"))), None))
-          else Future(DataErrorWrapper(None, Some(AN_ERROR)))
-        }
+  private def createTwitterShouterServiceWithAuthenticator(authenticator: TwitterAuthenticating) = {
+    val retriever = new TwitterTweetsRetrieving with TestUtils.TestActorSystemProvider {
+      override def getTweetsFromTwitterApi(accessToken: String, userName: String, numberOfTweets: Int): Future[DataErrorWrapper[List[Tweet]]] = {
+        if (CORRECT_TOKEN == accessToken) Future(DataErrorWrapper(Some(List(Tweet("a"), Tweet("b"))), None))
+        else Future(DataErrorWrapper(None, Some(TWEETS_RETRIEVAL_ERROR)))
       }
-      override val twitterAuthenticator: TwitterAuthenticating = authenticator
     }
-    override implicit val actorMaterializer: ActorMaterializer = TestUtils.testActorMaterializer
+    createTwitterShouterServiceWithAuthenticatorAndRetriever(authenticator, retriever)
   }
+
+  private def createTwitterShouterServiceWithfailingRetriever() = {
+    val retriever = new TwitterTweetsRetrieving with TestUtils.TestActorSystemProvider {
+      override def getTweetsFromTwitterApi(accessToken: String, userName: String, numberOfTweets: Int) =
+        Future(DataErrorWrapper(None, Some(TWEETS_RETRIEVAL_ERROR)))
+    }
+    createTwitterShouterServiceWithAuthenticatorAndRetriever(successfulAuthenticator, retriever)
+  }
+
+  private def createTwitterShouterServiceWithAuthenticatorAndRetriever(authenticator: TwitterAuthenticating, retriever: TwitterTweetsRetrieving) =
+    new TwitterShouterService with TestUtils.TestActorSystemContext {
+      override val twitterManager: TwitterManaging = new TwitterManager with TestUtils.TestActorSystemContext {
+        override val twitterTweetRetriever: TwitterTweetsRetrieving = retriever
+        override val twitterAuthenticator: TwitterAuthenticating = authenticator
+      }
+      override implicit val actorMaterializer: ActorMaterializer = TestUtils.testActorMaterializer
+    }
 
   private val successfulAuthenticator = createAuthenticatorReturning(DataErrorWrapper(Some(CORRECT_TOKEN), None))
 
@@ -71,7 +84,17 @@ class TwitterShouterServiceTest extends WordSpec with Matchers with ScalatestRou
       val failingAuthenticator = createAuthenticatorReturning(DataErrorWrapper(None, Some(AUTHENTICATION_ERROR)))
       val testSubject = createTwitterShouterServiceWithAuthenticator(failingAuthenticator)
       Get("/shouted?userName=trump&numberOfTweets=2") ~> testSubject.tweetsRoute ~> check {
-        responseAs[String] shouldEqual """{"error":"There was an authentication error!"}""".stripMargin
+        responseAs[String] shouldEqual """{"error":"""" + AUTHENTICATION_ERROR + """"}""".stripMargin
+      }
+    }
+  }
+
+  "The tweets endpoint" should {
+    "return an error if tweets retriever has failed" in {
+      val failingAuthenticator = createAuthenticatorReturning(DataErrorWrapper(None, Some(AUTHENTICATION_ERROR)))
+      val testSubject = createTwitterShouterServiceWithfailingRetriever()
+      Get("/shouted?userName=trump&numberOfTweets=2") ~> testSubject.tweetsRoute ~> check {
+        responseAs[String] shouldEqual """{"error":"""" + TWEETS_RETRIEVAL_ERROR + """"}""".stripMargin
       }
     }
   }
